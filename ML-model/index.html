@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Diet Recommendation</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 40px;
+    }
+    label {
+      display: block;
+      margin: 10px 0 5px;
+    }
+    input, select {
+      padding: 8px;
+      width: 200px;
+    }
+    button {
+      margin-top: 20px;
+      padding: 10px 20px;
+      font-weight: bold;
+    }
+    .results {
+      margin-top: 30px;
+    }
+    .meal-section {
+      margin-bottom: 20px;
+    }
+    h3 {
+      margin-bottom: 5px;
+    }
+    table, th, td {
+      border: 1px solid #aaa;
+      border-collapse: collapse;
+      padding: 8px;
+    }
+  </style>
+</head>
+<body>
+
+  <h1>🍽️ Diet Recommendation</h1>
+
+  <form id="dietForm">
+    <label>Weight (kg):</label>
+    <input type="number" id="weight" required>
+
+    <label>Height (cm):</label>
+    <input type="number" id="height" required>
+
+    <label>Age:</label>
+    <input type="number" id="age" required>
+
+    <label>Gender:</label>
+    <select id="gender">
+      <option value="male">Male</option>
+      <option value="female">Female</option>
+    </select>
+
+    <label>Activity Level:</label>
+    <select id="activity">
+      <option value="sedentary">Sedentary</option>
+      <option value="light">Light</option>
+      <option value="moderate">Moderate</option>
+      <option value="active">Active</option>
+      <option value="very_active">Very Active</option>
+    </select>
+
+    <button type="submit">Get Recommendations</button>
+  </form>
+
+  <div class="results" id="results"></div>
+
+  <script>
+    document.getElementById("dietForm").addEventListener("submit", function(e) {
+      e.preventDefault();
+
+      const data = {
+        weight: parseFloat(document.getElementById("weight").value),
+        height: parseFloat(document.getElementById("height").value),
+        age: parseInt(document.getElementById("age").value),
+        gender: document.getElementById("gender").value,
+        activity: document.getElementById("activity").value
+      };
+
+      fetch("http://localhost:5000/recommend", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify(data)
+      })
+      .then(res => {
+        if (!res.ok) throw new Error("Server error " + res.status);
+        return res.json();
+      })
+      .then(response => {
+        const { bmr, tdee, recommendations } = response;
+        let html = `
+          <h2>Results</h2>
+          <p><strong>BMR:</strong> ${bmr}</p>
+          <p><strong>TDEE:</strong> ${tdee}</p>
+        `;
+
+        const createMealTable = (mealName, items) => {
+          return `
+            <div class="meal-section">
+              <h3>${mealName.charAt(0).toUpperCase() + mealName.slice(1)}</h3>
+              <table>
+                <tr><th>Name</th><th>Calories</th><th>Recipe ID</th></tr>
+                ${items.map(item => `
+                  <tr>
+                    <td>${item.Name}</td>
+                    <td>${item.Calories}</td>
+                    <td>${item.RecipeId}</td>
+                  </tr>
+                `).join('')}
+              </table>
+            </div>
+          `;
+        };
+
+        html += createMealTable("breakfast", recommendations.breakfast);
+        html += createMealTable("lunch", recommendations.lunch);
+        html += createMealTable("dinner", recommendations.dinner);
+
+        document.getElementById("results").innerHTML = html;
+      })
+      .catch(err => {
+        console.error("Error:", err);
+        document.getElementById("results").innerHTML =
+          `<p style="color: red;">Error fetching data. Make sure the server is running at <code>http://localhost:5000</code>.</p>`;
+      });
+    });
+  </script>
+
+</body>
+</html>

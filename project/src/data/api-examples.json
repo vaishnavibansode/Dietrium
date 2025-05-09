@@ -1,0 +1,42 @@
+{
+  "request": {
+    "weight": 70,
+    "height": 175,
+    "age": 30,
+    "gender": "male",
+    "activity": "moderate"
+  },
+  "response": {
+    "bmr": 1662.5,
+    "tdee": 2576.875,
+    "recommendations": {
+      "breakfast": [
+        {
+          "RecipeId": "1",
+          "Name": "Healthy Oatmeal Bowl",
+          "Images": "https://images.pexels.com/photos/1640772/pexels-photo-1640772.jpeg",
+          "Calories": 450,
+          "RecipeInstructions": "Cook oatmeal with milk, top with fresh fruits and nuts"
+        }
+      ],
+      "lunch": [
+        {
+          "RecipeId": "2",
+          "Name": "Grilled Chicken Salad",
+          "Images": "https://images.pexels.com/photos/1660030/pexels-photo-1660030.jpeg",
+          "Calories": 650,
+          "RecipeInstructions": "Grill chicken breast, combine with fresh vegetables and vinaigrette"
+        }
+      ],
+      "dinner": [
+        {
+          "RecipeId": "3",
+          "Name": "Baked Salmon with Vegetables",
+          "Images": "https://images.pexels.com/photos/958545/pexels-photo-958545.jpeg",
+          "Calories": 550,
+          "RecipeInstructions": "Season salmon fillet, bake with assorted vegetables"
+        }
+      ]
+    }
+  }
+}
