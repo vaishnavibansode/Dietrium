@@ -1,8 +1,12 @@
 from pymongo import MongoClient
+import os
+from dotenv import load_dotenv
 
-# Replace with your MongoDB connection string
-client = MongoClient("mongodb://localhost:27017/")  # For local MongoDB
-# For MongoDB Atlas, use: MongoClient("mongodb+srv://<username>:<password>@cluster.mongodb.net/diet_recommendation")
+load_dotenv()
+# Get MongoDB connection string from environment variables
+mongodb_uri = os.getenv("MONGODB_URI")
+
+client = MongoClient(mongodb_uri)
 
 # Create or connect to the database
 db = client["diet_recommendation"]
