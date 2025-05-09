@@ -1,7 +1,7 @@
 from pymongo import MongoClient
 
 # Replace with your MongoDB connection string
-client = MongoClient("mongodb+srv://202301040131:<db_password>@cluster0.jeryt.mongodb.net/Dieterium?retryWrites=true&w=majority&appName=Cluster0")  # For local MongoDB
+client = MongoClient("mongodb+srv://202301040131:ukKiZ87cHQR2weMd@cluster0.jeryt.mongodb.net/Dieterium?retryWrites=true&w=majority&appName=Cluster0")  # For local MongoDB
 # For MongoDB Atlas, use: MongoClient("mongodb+srv://<username>:<password>@cluster.mongodb.net/diet_recommendation")
 
 # Create or connect to the database
