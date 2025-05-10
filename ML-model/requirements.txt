@@ -3,3 +3,4 @@ Flask-CORS==5.0.1
 joblib==1.4.2
 numpy==2.1.1
 pymongo==4.12.1
+python-dotenv==1.0.0
