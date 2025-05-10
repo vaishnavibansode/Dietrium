@@ -9,7 +9,7 @@ const api = axios.create({
     'Content-Type': 'application/json',
   },
   // Add timeout to prevent hanging requests
-  timeout: 10000,
+  timeout: 20000,
 });
 
 // Login functionality using backend API
