@@ -12,7 +12,9 @@ from Database import users_collection
 from recipe_images import get_image_for_recipe, DEFAULT_MEAL_IMAGES
 
 app = Flask(__name__)
-CORS(app)
+# CORS(app)
+CORS(app, resources={r"/*": {"origins": "*"}}, methods=["GET", "POST", "OPTIONS"])
+
 
 # Load trained model
 model = joblib.load("diet_recommender_model.pkl")
