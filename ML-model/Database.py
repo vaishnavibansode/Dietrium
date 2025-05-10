@@ -1,12 +1,18 @@
-from pymongo import MongoClient
 
-# Replace with your MongoDB connection string
-client = MongoClient("mongodb+srv://202301040131:ukKiZ87cHQR2weMd@cluster0.jeryt.mongodb.net/Dieterium?retryWrites=true&w=majority&appName=Cluster0")  # For local MongoDB
-# For MongoDB Atlas, use: MongoClient("mongodb+srv://<username>:<password>@cluster.mongodb.net/diet_recommendation")
+
+from pymongo import MongoClient
+import os
+from dotenv import load_dotenv
+
+load_dotenv()
+# Get MongoDB connection string from environment variables
+mongodb_uri = os.getenv("MONGODB_URI")
+
+client = MongoClient(mongodb_uri)
 
 # Create or connect to the database
 db = client["diet_recommendation"]
 
 # Create or connect to the collection
 recommendations_collection = db["recommendations"]
-users_collection = db["users"]  # New collection for user data
+users_collection = db["users"]  # New collection for user data
