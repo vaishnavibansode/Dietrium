@@ -1,7 +1,7 @@
 import axios, { AxiosError } from 'axios';
 import { User, RecommendationResponse } from '../types';
 
-const API_URL = 'http://127.0.0.1:5000';
+const API_URL = 'https://dietrium.onrender.com';
 
 const api = axios.create({
   baseURL: API_URL,
@@ -9,7 +9,7 @@ const api = axios.create({
     'Content-Type': 'application/json',
   },
   // Add timeout to prevent hanging requests
-  timeout: 10000,
+  timeout: 20000,
 });
 
 // Login functionality using backend API
