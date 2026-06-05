@@ -1,9 +1,12 @@
 from flask import Flask, request, jsonify
 from flask_cors import CORS
-import joblib
 import numpy as np
 import random
 import os
+import pandas as pd
+from sklearn.preprocessing import StandardScaler
+from sklearn.neighbors import NearestNeighbors
+import re
 
 # MongoDB collections
 from Database import recommendations_collection
@@ -12,12 +15,47 @@ from Database import users_collection
 from recipe_images import get_image_for_recipe, DEFAULT_MEAL_IMAGES
 
 app = Flask(__name__)
-# CORS(app)
 CORS(app, resources={r"/*": {"origins": "*"}}, methods=["GET", "POST", "OPTIONS"])
 
+# Load dataset and prepare model
+df_recipes = None
+scaler = None
+nn_model = None
 
-# Load trained model
-model = joblib.load("diet_recommender_model.pkl")
+def parse_instructions(inst_str):
+    if not isinstance(inst_str, str):
+        return []
+    # If R-style vector c("...")
+    if inst_str.startswith('c(') and inst_str.endswith(')'):
+        steps = re.findall(r'"([^"\\]*(?:\\.[^"\\]*)*)"', inst_str)
+        if steps:
+            return [step.replace('\\"', '"').strip() for step in steps]
+    return [step.strip() for step in inst_str.split('\n') if step.strip()]
+
+def init_model():
+    global df_recipes, scaler, nn_model
+    try:
+        csv_path = os.path.join(os.path.dirname(__file__), "recipes_small.csv")
+        print(f"Loading recipes from {csv_path}...")
+        df_recipes = pd.read_csv(csv_path)
+        
+        features = [
+            'Calories', 'FatContent', 'SaturatedFatContent', 'CholesterolContent', 
+            'SodiumContent', 'CarbohydrateContent', 'FiberContent', 'SugarContent', 
+            'ProteinContent'
+        ]
+        X = df_recipes[features].to_numpy()
+        
+        scaler = StandardScaler()
+        X_scaled = scaler.fit_transform(X)
+        
+        nn_model = NearestNeighbors(n_neighbors=5, metric='cosine', algorithm='brute')
+        nn_model.fit(X_scaled)
+        print("Model initialized and fit successfully!")
+    except Exception as e:
+        print("Error initializing recommendation model:", str(e))
+
+init_model()
 
 # Activity multipliers
 activity_multipliers = {
@@ -49,31 +87,63 @@ def recommend():
         height = float(data['height'])
         age = int(data['age'])
         gender = data['gender']
-        activity_level = data['activity_level']
+        activity_level = data.get('activity_level') or data.get('activity')
+        if not activity_level:
+            return jsonify({"error": "Activity level is required"}), 400
+            
         email = data.get('email', 'anonymous')
 
         bmr = calculate_bmr(weight, height, age, gender)
         tdee = bmr * activity_multipliers.get(activity_level, 1.2)
 
-        # Make prediction using model
-        features = np.array([[weight, height, age, tdee]])  # Adjust if your model expects more inputs
-        prediction = model.predict(features)[0]
-
-        # Assign meals (you can customize this logic)
-        meals = {
-            "breakfast": prediction + " (Breakfast)",
-            "lunch": prediction + " (Lunch)",
-            "dinner": prediction + " (Dinner)"
+        # Generate targets for breakfast (25%), lunch (40%), dinner (35%)
+        targets = {
+            "breakfast": 0.25 * tdee,
+            "lunch": 0.40 * tdee,
+            "dinner": 0.35 * tdee
         }
-
-        # Add image URLs
-        meals_with_images = {
-            meal: {
-                "name": name,
-                "image": get_image_for_recipe(name) or DEFAULT_MEAL_IMAGES.get(meal, "")
-            }
-            for meal, name in meals.items()
-        }
+        
+        recommendations = {}
+        for meal_type, target_cal in targets.items():
+            # Build healthy target query vector: 50% Carbs, 20% Protein, 30% Fat
+            target_fat = (0.30 * target_cal) / 9.0
+            target_carbs = (0.50 * target_cal) / 4.0
+            target_protein = (0.20 * target_cal) / 4.0
+            
+            target_sat_fat = target_fat / 3.0
+            target_cholesterol = (300.0 * target_cal) / 2000.0
+            target_sodium = (2300.0 * target_cal) / 2000.0
+            target_fiber = (25.0 * target_cal) / 2000.0
+            target_sugar = (50.0 * target_cal) / 2000.0
+            
+            query = np.array([[
+                target_cal, target_fat, target_sat_fat, target_cholesterol, 
+                target_sodium, target_carbs, target_fiber, target_sugar, target_protein
+            ]])
+            
+            query_scaled = scaler.transform(query)
+            distances, indices = nn_model.kneighbors(query_scaled, n_neighbors=5)
+            
+            meal_list = []
+            # Select a random recipe among the top 5 matches to add variety
+            selected_indices = random.sample(list(indices[0]), 3)
+            for idx in selected_indices:
+                row = df_recipes.iloc[idx]
+                instructions = parse_instructions(row['RecipeInstructions'])
+                img_url = row['Cleaned_Image']
+                if isinstance(img_url, str):
+                    img_url = img_url.strip('"').strip("'")
+                else:
+                    img_url = ""
+                    
+                meal_list.append({
+                    "RecipeId": str(row['RecipeId']),
+                    "Name": str(row['Name']),
+                    "Calories": float(row['Calories']),
+                    "RecipeInstructions": instructions,
+                    "Images": img_url
+                })
+            recommendations[meal_type] = meal_list
 
         # Store in DB
         recommendations_collection.insert_one({
@@ -83,12 +153,15 @@ def recommend():
             "age": age,
             "gender": gender,
             "activity_level": activity_level,
-            "recommendation": meals_with_images
+            "recommendations": recommendations,
+            "bmr": bmr,
+            "tdee": tdee
         })
 
         return jsonify({
+            "bmr": round(bmr, 2),
             "tdee": round(tdee, 2),
-            "meals": meals_with_images
+            "recommendations": recommendations
         })
 
     except Exception as e:
