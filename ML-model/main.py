@@ -109,26 +109,25 @@ def filter_recipes_by_preferences(df, preferences):
     dairy_keywords = ["milk", "cheese", "butter", "cream", "yogurt"]
     
     for pref in prefs:
+        exclude_pattern = None
         if "vegan" in pref:
-            pattern = "|".join(non_vegan_keywords)
-            filtered_df = filtered_df[~filtered_df['RecipeIngredientParts'].astype(str).str.lower().str.contains(pattern, na=False)]
+            exclude_pattern = "|".join(non_vegan_keywords)
         elif "vegetarian" in pref or "veg" in pref:
-            pattern = "|".join(non_veg_keywords)
-            filtered_df = filtered_df[~filtered_df['RecipeIngredientParts'].astype(str).str.lower().str.contains(pattern, na=False)]
+            exclude_pattern = "|".join(non_veg_keywords)
         elif "gluten" in pref:
-            pattern = "|".join(gluten_keywords)
-            filtered_df = filtered_df[~filtered_df['RecipeIngredientParts'].astype(str).str.lower().str.contains(pattern, na=False)]
+            exclude_pattern = "|".join(gluten_keywords)
         elif "peanut" in pref:
-            pattern = "|".join(peanut_keywords)
-            filtered_df = filtered_df[~filtered_df['RecipeIngredientParts'].astype(str).str.lower().str.contains(pattern, na=False)]
+            exclude_pattern = "|".join(peanut_keywords)
         elif "dairy" in pref:
-            pattern = "|".join(dairy_keywords)
-            filtered_df = filtered_df[~filtered_df['RecipeIngredientParts'].astype(str).str.lower().str.contains(pattern, na=False)]
+            exclude_pattern = "|".join(dairy_keywords)
         else:
-            # Custom keyword exclusion (e.g. "no onion")
-            keyword = pref.replace("no ", "").replace("free", "").strip()
-            if keyword:
-                filtered_df = filtered_df[~filtered_df['RecipeIngredientParts'].astype(str).str.lower().str.contains(keyword, na=False)]
+            exclude_pattern = pref.replace("no ", "").replace("free", "").strip()
+            
+        if exclude_pattern:
+            # Check both RecipeIngredientParts and Name to handle database discrepancies
+            mask_ingredients = filtered_df['RecipeIngredientParts'].astype(str).str.lower().str.contains(exclude_pattern, na=False)
+            mask_name = filtered_df['Name'].astype(str).str.lower().str.contains(exclude_pattern, na=False)
+            filtered_df = filtered_df[~(mask_ingredients | mask_name)]
                 
     # Fallback to avoid empty results
     if len(filtered_df) < 10:
