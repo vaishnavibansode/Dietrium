@@ -78,6 +78,65 @@ def calculate_bmr(weight, height, age, gender):
 def health():
     return jsonify({"status": "healthy"}), 200
 
+def filter_recipes_by_preferences(df, preferences):
+    if not preferences:
+        return df
+        
+    filtered_df = df.copy()
+    
+    # Standardize preferences to lowercase
+    prefs = [p.lower().strip() for p in preferences]
+    
+    # Non-vegetarian ingredients to exclude if "vegetarian" or "veg" is selected
+    non_veg_keywords = [
+        "chicken", "beef", "pork", "mutton", "lamb", "bacon", "sausage", 
+        "ham", "turkey", "fish", "salmon", "tuna", "shrimp", "crab", "lobster", 
+        "seafood", "meat", "anchovy", "gelatin"
+    ]
+    
+    # Non-vegan ingredients to exclude if "vegan" is selected
+    non_vegan_keywords = non_veg_keywords + [
+        "cheese", "milk", "butter", "cream", "yogurt", "egg", "honey", "whey", "ghee"
+    ]
+    
+    # Gluten ingredients to exclude if "gluten-free" is selected
+    gluten_keywords = ["wheat", "barley", "rye", "flour", "pasta", "semolina"]
+    
+    # Peanut allergy keywords to exclude if "peanut" is selected
+    peanut_keywords = ["peanut"]
+    
+    # Dairy allergy keywords to exclude if "dairy" is selected
+    dairy_keywords = ["milk", "cheese", "butter", "cream", "yogurt"]
+    
+    for pref in prefs:
+        if "vegan" in pref:
+            pattern = "|".join(non_vegan_keywords)
+            filtered_df = filtered_df[~filtered_df['RecipeIngredientParts'].astype(str).str.lower().str.contains(pattern, na=False)]
+        elif "vegetarian" in pref or "veg" in pref:
+            pattern = "|".join(non_veg_keywords)
+            filtered_df = filtered_df[~filtered_df['RecipeIngredientParts'].astype(str).str.lower().str.contains(pattern, na=False)]
+        elif "gluten" in pref:
+            pattern = "|".join(gluten_keywords)
+            filtered_df = filtered_df[~filtered_df['RecipeIngredientParts'].astype(str).str.lower().str.contains(pattern, na=False)]
+        elif "peanut" in pref:
+            pattern = "|".join(peanut_keywords)
+            filtered_df = filtered_df[~filtered_df['RecipeIngredientParts'].astype(str).str.lower().str.contains(pattern, na=False)]
+        elif "dairy" in pref:
+            pattern = "|".join(dairy_keywords)
+            filtered_df = filtered_df[~filtered_df['RecipeIngredientParts'].astype(str).str.lower().str.contains(pattern, na=False)]
+        else:
+            # Custom keyword exclusion (e.g. "no onion")
+            keyword = pref.replace("no ", "").replace("free", "").strip()
+            if keyword:
+                filtered_df = filtered_df[~filtered_df['RecipeIngredientParts'].astype(str).str.lower().str.contains(keyword, na=False)]
+                
+    # Fallback to avoid empty results
+    if len(filtered_df) < 10:
+        return df
+        
+    return filtered_df
+
+
 @app.route("/recommend", methods=["POST"])
 def recommend():
     try:
@@ -92,9 +151,27 @@ def recommend():
             return jsonify({"error": "Activity level is required"}), 400
             
         email = data.get('email', 'anonymous')
+        food_preferences = data.get('foodPreferences', [])
 
         bmr = calculate_bmr(weight, height, age, gender)
         tdee = bmr * activity_multipliers.get(activity_level, 1.2)
+
+        # Filter database by preferences
+        df_filtered = filter_recipes_by_preferences(df_recipes, food_preferences)
+        
+        # Fit dynamic NearestNeighbors on filtered dataset
+        features = [
+            'Calories', 'FatContent', 'SaturatedFatContent', 'CholesterolContent', 
+            'SodiumContent', 'CarbohydrateContent', 'FiberContent', 'SugarContent', 
+            'ProteinContent'
+        ]
+        X_filtered = df_filtered[features].to_numpy()
+        
+        scaler_filtered = StandardScaler()
+        X_scaled = scaler_filtered.fit_transform(X_filtered)
+        
+        nn_filtered = NearestNeighbors(n_neighbors=min(5, len(df_filtered)), metric='cosine', algorithm='brute')
+        nn_filtered.fit(X_scaled)
 
         # Generate targets for breakfast (25%), lunch (40%), dinner (35%)
         targets = {
@@ -121,14 +198,16 @@ def recommend():
                 target_sodium, target_carbs, target_fiber, target_sugar, target_protein
             ]])
             
-            query_scaled = scaler.transform(query)
-            distances, indices = nn_model.kneighbors(query_scaled, n_neighbors=5)
+            query_scaled = scaler_filtered.transform(query)
+            n_neighbors_to_fetch = min(5, len(df_filtered))
+            distances, indices = nn_filtered.kneighbors(query_scaled, n_neighbors=n_neighbors_to_fetch)
             
             meal_list = []
-            # Select a random recipe among the top 5 matches to add variety
-            selected_indices = random.sample(list(indices[0]), 3)
+            # Select up to 3 random recipes from the neighbors for variety
+            num_samples = min(3, len(indices[0]))
+            selected_indices = random.sample(list(indices[0]), num_samples)
             for idx in selected_indices:
-                row = df_recipes.iloc[idx]
+                row = df_filtered.iloc[idx]
                 instructions = parse_instructions(row['RecipeInstructions'])
                 img_url = row['Cleaned_Image']
                 if isinstance(img_url, str):
@@ -153,6 +232,7 @@ def recommend():
             "age": age,
             "gender": gender,
             "activity_level": activity_level,
+            "food_preferences": food_preferences,
             "recommendations": recommendations,
             "bmr": bmr,
             "tdee": tdee

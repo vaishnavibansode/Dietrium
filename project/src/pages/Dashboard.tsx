@@ -49,6 +49,7 @@ const Dashboard: React.FC = () => {
         age: state.user.age,
         gender: state.user.gender,
         activity: state.user.activity,
+        foodPreferences: state.user.foodPreferences || [],
       });
       setRecommendations(response);
     } catch (error) {
