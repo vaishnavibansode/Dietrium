@@ -35,6 +35,11 @@ def calculate_bmr(weight, height, age, gender):
     else:
         return 10 * weight + 6.25 * height - 5 * age - 161
 
+
+@app.route("/health", methods=["GET"])
+def health():
+    return jsonify({"status": "healthy"}), 200
+
 @app.route("/recommend", methods=["POST"])
 def recommend():
     try:
