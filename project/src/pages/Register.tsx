@@ -18,18 +18,19 @@ const Register: React.FC = () => {
     age: '',
     gender: '',
     activity: '',
+    goal: 'balanced',
   });
   
   const { register, state } = useAuth();
   const navigate = useNavigate();
-
+ 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     setFormData({
       ...formData,
       [e.target.id]: e.target.value,
     });
   };
-
+ 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -43,6 +44,7 @@ const Register: React.FC = () => {
           age: formData.age ? parseInt(formData.age, 10) : undefined,
           gender: formData.gender as 'male' | 'female' | undefined,
           activity: formData.activity as ActivityLevel | undefined,
+          goal: formData.goal,
         },
         formData.password
       );
@@ -51,13 +53,20 @@ const Register: React.FC = () => {
       console.error('Registration failed:', error);
     }
   };
-
+ 
   const activityOptions = [
     { value: 'sedentary', label: 'Sedentary (little or no exercise)' },
     { value: 'light', label: 'Light (exercise 1-3 times/week)' },
     { value: 'moderate', label: 'Moderate (exercise 4-5 times/week)' },
     { value: 'active', label: 'Active (daily exercise or intense 3-4 times/week)' },
     { value: 'very_active', label: 'Very Active (intense exercise 6-7 times/week)' },
+  ];
+
+  const goalOptions = [
+    { value: 'balanced', label: 'Balanced Diet' },
+    { value: 'high_protein', label: 'Gain Muscle (High Protein)' },
+    { value: 'low_fat', label: 'Lose Weight (Low Fat)' },
+    { value: 'keto', label: 'Keto (Low Carb, High Fat)' },
   ];
 
   return (
@@ -160,6 +169,14 @@ const Register: React.FC = () => {
                 value={formData.activity}
                 onChange={handleChange}
                 options={activityOptions}
+              />
+
+              <Select
+                label="Health/Nutrition Goal"
+                id="goal"
+                value={formData.goal}
+                onChange={handleChange}
+                options={goalOptions}
               />
             </div>
 

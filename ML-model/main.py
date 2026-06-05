@@ -152,9 +152,21 @@ def recommend():
             
         email = data.get('email', 'anonymous')
         food_preferences = data.get('foodPreferences', [])
+        goal = data.get('goal', 'balanced')
 
         bmr = calculate_bmr(weight, height, age, gender)
         tdee = bmr * activity_multipliers.get(activity_level, 1.2)
+
+        # Target nutrient splits based on goal
+        # Default split: balanced (50% Carbs, 20% Protein, 30% Fat)
+        carb_ratio, protein_ratio, fat_ratio = 0.50, 0.20, 0.30
+        
+        if goal == 'high_protein':
+            carb_ratio, protein_ratio, fat_ratio = 0.40, 0.35, 0.25
+        elif goal == 'low_fat':
+            carb_ratio, protein_ratio, fat_ratio = 0.60, 0.20, 0.20
+        elif goal == 'keto':
+            carb_ratio, protein_ratio, fat_ratio = 0.05, 0.25, 0.70
 
         # Filter database by preferences
         df_filtered = filter_recipes_by_preferences(df_recipes, food_preferences)
@@ -182,10 +194,10 @@ def recommend():
         
         recommendations = {}
         for meal_type, target_cal in targets.items():
-            # Build healthy target query vector: 50% Carbs, 20% Protein, 30% Fat
-            target_fat = (0.30 * target_cal) / 9.0
-            target_carbs = (0.50 * target_cal) / 4.0
-            target_protein = (0.20 * target_cal) / 4.0
+            # Build target query vector using dynamic goal splits
+            target_fat = (fat_ratio * target_cal) / 9.0
+            target_carbs = (carb_ratio * target_cal) / 4.0
+            target_protein = (protein_ratio * target_cal) / 4.0
             
             target_sat_fat = target_fat / 3.0
             target_cholesterol = (300.0 * target_cal) / 2000.0
@@ -233,6 +245,7 @@ def recommend():
             "gender": gender,
             "activity_level": activity_level,
             "food_preferences": food_preferences,
+            "goal": goal,
             "recommendations": recommendations,
             "bmr": bmr,
             "tdee": tdee

@@ -8,6 +8,7 @@ export interface User {
   gender?: 'male' | 'female';
   activity?: ActivityLevel;
   foodPreferences?: string[];
+  goal?: string;
 }
 
 export type ActivityLevel = 'sedentary' | 'light' | 'moderate' | 'active' | 'very_active';

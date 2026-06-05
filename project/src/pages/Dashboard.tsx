@@ -50,6 +50,7 @@ const Dashboard: React.FC = () => {
         gender: state.user.gender,
         activity: state.user.activity,
         foodPreferences: state.user.foodPreferences || [],
+        goal: state.user.goal || 'balanced',
       });
       setRecommendations(response);
     } catch (error) {

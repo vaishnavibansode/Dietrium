@@ -19,6 +19,7 @@ const Profile: React.FC = () => {
     gender: undefined,
     activity: undefined,
     foodPreferences: [],
+    goal: 'balanced',
   });
   const [saving, setSaving] = useState(false);
   const [foodPreference, setFoodPreference] = useState('');
@@ -39,6 +40,7 @@ const Profile: React.FC = () => {
         gender: state.user.gender,
         activity: state.user.activity,
         foodPreferences: state.user.foodPreferences || [],
+        goal: state.user.goal || 'balanced',
       });
     }
   }, [state.isAuthenticated, state.user, navigate]);
@@ -91,6 +93,13 @@ const Profile: React.FC = () => {
     { value: 'moderate', label: 'Moderate (exercise 4-5 times/week)' },
     { value: 'active', label: 'Active (daily exercise or intense 3-4 times/week)' },
     { value: 'very_active', label: 'Very Active (intense exercise 6-7 times/week)' },
+  ];
+
+  const goalOptions = [
+    { value: 'balanced', label: 'Balanced Diet' },
+    { value: 'high_protein', label: 'Gain Muscle (High Protein)' },
+    { value: 'low_fat', label: 'Lose Weight (Low Fat)' },
+    { value: 'keto', label: 'Keto (Low Carb, High Fat)' },
   ];
 
   return (
@@ -180,6 +189,17 @@ const Profile: React.FC = () => {
                     value={formData.activity || ''}
                     onChange={handleChange}
                     options={activityOptions}
+                    required
+                  />
+                </div>
+                
+                <div className="grid grid-cols-1 gap-4 mt-4">
+                  <Select
+                    label="Health/Nutrition Goal"
+                    id="goal"
+                    value={formData.goal || ''}
+                    onChange={handleChange}
+                    options={goalOptions}
                     required
                   />
                 </div>

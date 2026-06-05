@@ -152,6 +152,7 @@ export const getDietRecommendations = async (userData: {
   gender: string;
   activity: string;
   foodPreferences?: string[];
+  goal?: string;
 }): Promise<RecommendationResponse> => {
   try {
     const response = await api.post('/recommend', userData);
