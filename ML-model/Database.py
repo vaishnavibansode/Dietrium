@@ -8,13 +8,8 @@ load_dotenv()
 # Get MongoDB connection string from environment variables
 mongodb_uri = os.getenv("MONGODB_URI")
 
-client = MongoClient(mongodb_uri)
-import os
-from dotenv import load_dotenv
-
-load_dotenv()
-# Get MongoDB connection string from environment variables
-mongodb_uri = os.getenv("MONGODB_URI")
+if not mongodb_uri:
+    raise ValueError("Missing environment variable: MONGODB_URI is not set or empty. Please check your Render configuration.")
 
 client = MongoClient(mongodb_uri)
 
